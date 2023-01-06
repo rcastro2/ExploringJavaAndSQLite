@@ -8,30 +8,13 @@ public class Database{
 
     public Database(String url){
         this.url = url;
-        if(!connect()){
-            createDB();
-        }else{
-            System.out.println("Successfully tested connection to database"); 
-        }
-    }
-    private boolean createDB(){
-        boolean success = true;
-        try(Connection conn = DriverManager.getConnection(url);
-            Statement stmt = conn.createStatement();)
-        {	
-            System.out.println("Database created successfully");   	  
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-            success = false;
-        } 
-        return success;
+        connect(); 
     }
     private boolean connect(){
         boolean success = true;
         try{
-            //Create a connection to the database
-            conn = DriverManager.getConnection(url);
-            //System.out.println("Connection to SQLite has been established.");    
+            //Create a connection to the database. If it doesn't exist, create the DB
+            conn = DriverManager.getConnection(url);    
         } catch (SQLException e) {
             System.out.println(e.getMessage());
             success = false;
@@ -49,27 +32,44 @@ public class Database{
         }
         return success; 
     }
-    public String selectData(String sql){
-        String result = null;
+    public boolean runSQL(String sql){
+        boolean success = true;
+        try(Connection conn = DriverManager.getConnection(url);
+            Statement stmt = conn.createStatement();)
+        {	
+            stmt.execute(sql);
+            //conn.commit(); 	  
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+            success = false;
+        }finally {
+            close();
+        }
+        return success;
+    }
+    public ResultSet runQuery(String sql){
+        ResultSet rs = null;
         connect();
-        //System.out.println(sql);
         try (Statement stmt  = conn.createStatement()){
-            ResultSet rs    = stmt.executeQuery(sql);
-            result = jsonify(rs);
+            rs = stmt.executeQuery(sql);
+            conn.commit();
+            //print(table(rs,12));
+            //print(json(rs));
+            //print(csv(rs));
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         } finally {
             close();
         }
-        return result;
+        return rs;
     }
 
-    public ResultSet runSQL(String sql){
-        ResultSet rs = null;
+    public int runUpdate(String sql){
+        int rs = 0;
         connect();
         try (Statement stmt  = conn.createStatement()){
             rs = stmt.executeUpdate(sql);
-            conn.commit();
+            //conn.commit();
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         } finally {     
@@ -77,7 +77,18 @@ public class Database{
         }
         return rs;
     }
-    public static String jsonify(ResultSet rs){
+    
+    //https://stackoverflow.com/questions/24229442/print-the-data-in-resultset-along-with-column-names
+    public String pad(String text, int width){
+        String s = text.length() % 2 == 1? text += " ": text;
+        s = text.length() >= width ? text.substring(0,10): text;
+        int diff = width - s.length();
+        int padSize = diff / 2;
+        String padding = new String(new char[padSize]).replace("\0", " ");
+        return padding + s + padding;
+    }
+
+    public static String json(ResultSet rs){
 		String result = "";
         try{       
             //Get field names            
@@ -101,4 +112,74 @@ public class Database{
         }
         return result;
 	}
+
+    public String table(ResultSet rs, int colWidth){
+		String result = "";
+        try{       
+            //Get field names            
+            ResultSetMetaData metadata = rs.getMetaData();
+            int columnCount = metadata.getColumnCount();   
+
+            String rowSeparator = "+";
+            for(int i = 0; i < columnCount; i++){
+                for(int j = 0; j < colWidth; j++){
+                    rowSeparator += "-";
+                }
+                rowSeparator += "+";
+            }
+
+            String field, value, header = "|", row;
+            //Create Column Headers
+            for (int i = 1; i <= columnCount; i++) {
+                field = metadata.getColumnName(i);
+                header += pad(field,colWidth) + "|" ;
+            }
+            result = rowSeparator + "\n" + header + "\n" + rowSeparator + "\n";
+            while (rs.next()) {
+                row = "|";
+                for (int i = 1; i <= columnCount; i++) {
+                    field = metadata.getColumnName(i);
+                    value = rs.getString(field);
+                    row += pad(value,colWidth) + "|";
+                }
+                result += row + "\n" + rowSeparator + "\n";
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+        return result;
+	}
+
+    public String csv(ResultSet rs){
+		String result = "";
+        try{       
+            //Get field names            
+            ResultSetMetaData metadata = rs.getMetaData();
+            int columnCount = metadata.getColumnCount();   
+
+            String field, value;
+            //Create Column Headers
+            for (int i = 1; i <= columnCount; i++) {
+                field = metadata.getColumnName(i);
+                result += field + "," ;
+            }
+            result += "\n";
+            while (rs.next()) {
+                for (int i = 1; i <= columnCount; i++) {
+                    field = metadata.getColumnName(i);
+                    value = rs.getString(field);
+                    result += value + ",";
+                }
+                result += "\n";
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+        return result;
+	}
+
+    private static void print(Object obj){
+        System.out.println(obj.toString());
+    }
+    
 }
