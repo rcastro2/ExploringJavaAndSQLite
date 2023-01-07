@@ -34,6 +34,7 @@ public class Database{
     }
     public boolean runSQL(String sql){
         boolean success = true;
+        connect();
         try(Connection conn = DriverManager.getConnection(url);
             Statement stmt = conn.createStatement();)
         {	
@@ -47,21 +48,25 @@ public class Database{
         }
         return success;
     }
-    public ResultSet runQuery(String sql){
-        ResultSet rs = null;
+    public String runQuery(String sql, String format){
+        String result = null;
         connect();
         try (Statement stmt  = conn.createStatement()){
-            rs = stmt.executeQuery(sql);
-            conn.commit();
-            //print(table(rs,12));
-            //print(json(rs));
-            //print(csv(rs));
+            ResultSet rs = stmt.executeQuery(sql);
+            if(format.indexOf("table") != -1){
+                int colWidth = Integer.parseInt(format.substring(format.indexOf("-")+1));
+                result = table(rs,colWidth);
+            }else if(format.equals("json")){
+                result = json(rs);
+            }else if(format.equals("csv")){
+                result = csv(rs);
+            }
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         } finally {
             close();
         }
-        return rs;
+        return result;
     }
 
     public int runUpdate(String sql){
@@ -78,17 +83,16 @@ public class Database{
         return rs;
     }
     
-    //https://stackoverflow.com/questions/24229442/print-the-data-in-resultset-along-with-column-names
     public String pad(String text, int width){
         String s = text.length() % 2 == 1? text += " ": text;
-        s = text.length() >= width ? text.substring(0,10): text;
+        s = text.length() >= width ? text.substring(0,width - 2): text;
         int diff = width - s.length();
         int padSize = diff / 2;
         String padding = new String(new char[padSize]).replace("\0", " ");
         return padding + s + padding;
     }
 
-    public static String json(ResultSet rs){
+    private String json(ResultSet rs){
 		String result = "";
         try{       
             //Get field names            
@@ -113,7 +117,7 @@ public class Database{
         return result;
 	}
 
-    public String table(ResultSet rs, int colWidth){
+    private String table(ResultSet rs, int colWidth){
 		String result = "";
         try{       
             //Get field names            
@@ -150,7 +154,7 @@ public class Database{
         return result;
 	}
 
-    public String csv(ResultSet rs){
+    private String csv(ResultSet rs){
 		String result = "";
         try{       
             //Get field names            
@@ -177,9 +181,5 @@ public class Database{
         }
         return result;
 	}
-
-    private static void print(Object obj){
-        System.out.println(obj.toString());
-    }
     
 }
