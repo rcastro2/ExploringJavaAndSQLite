@@ -1,15 +1,19 @@
-//https://raima.com/how-to-create-a-database-using-jdbc/
-//https://www.sqlitetutorial.net/sqlite-java/create-table/
+//https://www.sqlitetutorial.net/sqlite-java
 import java.sql.*;
 import java.util.ArrayList;
 
 public class Database{
     private String url;
     private Connection conn;
+    private boolean debug;
 
     public Database(String url){
         this.url = url;
+        this.debug = true;
         connect(); 
+    }
+    public void setDebug(boolean state){
+        this.debug = state;
     }
     private boolean connect(){
         boolean success = true;
@@ -17,7 +21,7 @@ public class Database{
             //Create a connection to the database. If it doesn't exist, create the DB
             conn = DriverManager.getConnection(url);    
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            if(this.debug) System.out.println(e.getMessage());
             success = false;
         } 
         return success;
@@ -28,7 +32,7 @@ public class Database{
             //Close the connection to the database
             conn.close();   
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            if(this.debug) System.out.println(e.getMessage());
             success = false;
         }
         return success; 
@@ -42,7 +46,7 @@ public class Database{
             stmt.execute(sql);
             //conn.commit(); 	  
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            if(this.debug) System.out.println(e.getMessage());
             success = false;
         }finally {
             close();
@@ -63,7 +67,7 @@ public class Database{
                 result = csv(rs);
             }
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            if(this.debug) System.out.println(e.getMessage());
         } finally {
             close();
         }
@@ -77,7 +81,7 @@ public class Database{
             rs = stmt.executeUpdate(sql);
             //conn.commit();
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            if(this.debug) System.out.println(e.getMessage());
         } finally {     
             close();      
         }
@@ -106,14 +110,14 @@ public class Database{
                 build += "{";
                 for (int i = 1; i <= columnCount; i++) {
                     field = metadata.getColumnName(i);
-                    value = rs.getString(field);
+                    value = rs.getString(field).replace("\"","");
                     build += "\"" + field + "\":\"" + value + "\",";
                 }
                 build = build.substring(0,build.length()-1) + "},";
             }
             result = build.substring(0,build.length()-1) + "]";
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            if(this.debug) System.out.println(e.getMessage());
         }
         return result;
 	}
@@ -184,8 +188,9 @@ public class Database{
                 }
                 result += "\n" + rowSeparator + "\n";
             }
+            result += data.size() - 1 + " records found.\n";
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            if(this.debug) System.out.println(e.getMessage());
         }
         return result;
 	}
@@ -207,13 +212,13 @@ public class Database{
             while (rs.next()) {
                 for (int i = 1; i <= columnCount; i++) {
                     field = metadata.getColumnName(i);
-                    value = rs.getString(field);
+                    value = rs.getString(field).replace(",","");
                     result += value + ",";
                 }
                 result += "\n";
             }
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            if(this.debug) System.out.println(e.getMessage());
         }
         return result;
 	}    
