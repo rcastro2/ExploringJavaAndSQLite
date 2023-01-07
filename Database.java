@@ -1,6 +1,7 @@
 //https://raima.com/how-to-create-a-database-using-jdbc/
 //https://www.sqlitetutorial.net/sqlite-java/create-table/
 import java.sql.*;
+import java.util.ArrayList;
 
 public class Database{
     private String url;
@@ -54,7 +55,7 @@ public class Database{
         try (Statement stmt  = conn.createStatement()){
             ResultSet rs = stmt.executeQuery(sql);
             if(format.indexOf("table") != -1){
-                int colWidth = Integer.parseInt(format.substring(format.indexOf("-")+1));
+                String colWidth = format.substring(format.indexOf("-")+1);
                 result = table(rs,colWidth);
             }else if(format.equals("json")){
                 result = json(rs);
@@ -117,36 +118,71 @@ public class Database{
         return result;
 	}
 
-    private String table(ResultSet rs, int colWidth){
-		String result = "";
+    private String table(ResultSet rs, String colWidth){
+		String result = "", build;
         try{       
-            //Get field names            
+            //Get field names           
             ResultSetMetaData metadata = rs.getMetaData();
-            int columnCount = metadata.getColumnCount();   
-
+            int columnCount = metadata.getColumnCount(); 
+            ArrayList<ArrayList<String>> data = new ArrayList<ArrayList<String>>();
+            ArrayList<String> row;
+            int[] maxWidths = new int[columnCount]; 
+            String field, value;
+            //Determine maxwidth for each column and store data
+            row = new ArrayList<String>();
+            for (int i = 1; i <= columnCount; i++) {
+                field = metadata.getColumnName(i);
+                row.add(field);
+                maxWidths[i - 1] = Math.max(maxWidths[i - 1], field.length());
+            }
+            data.add(row);
+            while (rs.next()) {
+                row = new ArrayList<String>();
+                for (int i = 1; i <= columnCount; i++) {
+                    field = metadata.getColumnName(i);
+                    value = rs.getString(field);
+                    row.add(value);
+                    maxWidths[i - 1] = Math.max(maxWidths[i - 1], value.length());
+                }   
+                data.add(row);
+            }
+            if(colWidth.equals("auto")){
+                for(int i = 0; i < columnCount;i++){
+                    if(maxWidths[i] % 2 == 1){
+                        maxWidths[i]++;
+                    } 
+                }
+            }else{
+                int width = Integer.parseInt(colWidth); 
+                if(width % 2 == 1){
+                    width ++;
+                }
+                for(int i = 0; i < columnCount;i++){
+                    maxWidths[i] = width;
+                }
+            }
+            
             String rowSeparator = "+";
             for(int i = 0; i < columnCount; i++){
-                for(int j = 0; j < colWidth; j++){
+                for(int j = 0; j < maxWidths[i]+2; j++){
                     rowSeparator += "-";
                 }
                 rowSeparator += "+";
             }
-
-            String field, value, header = "|", row;
+            String header = "|";
             //Create Column Headers
-            for (int i = 1; i <= columnCount; i++) {
-                field = metadata.getColumnName(i);
-                header += pad(field,colWidth) + "|" ;
+            row = data.get(0);
+            for (int i = 0; i < columnCount; i++) {
+                header += pad(row.get(i),maxWidths[i]+2) + "|" ;
             }
             result = rowSeparator + "\n" + header + "\n" + rowSeparator + "\n";
-            while (rs.next()) {
-                row = "|";
-                for (int i = 1; i <= columnCount; i++) {
-                    field = metadata.getColumnName(i);
-                    value = rs.getString(field);
-                    row += pad(value,colWidth) + "|";
+            for(int i = 1; i < data.size(); i++){
+                row = data.get(i);
+                result += "|";
+                for(int j = 0; j < row.size(); j++){                
+                    result += pad(row.get(j),maxWidths[j]+2) + "|";
                 }
-                result += row + "\n" + rowSeparator + "\n";
+                result += "\n" + rowSeparator + "\n";
             }
         } catch (SQLException e) {
             System.out.println(e.getMessage());
@@ -180,6 +216,5 @@ public class Database{
             System.out.println(e.getMessage());
         }
         return result;
-	}
-    
+	}    
 }

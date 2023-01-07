@@ -27,7 +27,7 @@ public class DatabaseExplore {
         System.out.println(db.runSQL(sql));
         */
         String sql = "SELECT * FROM Student";
-        System.out.println(db.runQuery(sql,"table-12"));
+        System.out.println(db.runQuery(sql,"table-10"));
 
         sql = "UPDATE Student SET name = 'Reji' WHERE id = 3;";
         System.out.println(db.runSQL(sql));
@@ -36,7 +36,8 @@ public class DatabaseExplore {
         System.out.println(db.runSQL(sql));
 
         sql = "SELECT * FROM Student";
-        System.out.println(db.runQuery(sql,"table-20"));
+        System.out.println(db.runQuery(sql,"table-15"));
+        System.out.println(db.runQuery(sql,"table-auto"));
         System.out.println(db.runQuery(sql,"json"));
         System.out.println(db.runQuery(sql,"csv"));
        
