@@ -29,7 +29,6 @@ public class Database{
     private boolean close(){
        boolean success = true;
         try{
-            //Close the connection to the database
             conn.close();   
         } catch (SQLException e) {
             if(this.debug) System.out.println(e.getMessage());
@@ -37,6 +36,9 @@ public class Database{
         }
         return success; 
     }
+    /*runSQL(String):
+      Used for most SQL statements such as create, update, insert and delete.
+    */
     public boolean runSQL(String sql){
         boolean success = true;
         connect();
@@ -53,7 +55,12 @@ public class Database{
         }
         return success;
     }
-    public String runQuery(String sql, String format){
+    /* runSQL(String,String):
+       Used for select statements which return information in a particular format. 
+       Formats include json, csv or  table-<size>.  When using the table format you have to 
+       provide a size for the table, table-auto makes the columns autofit the data in the column.
+    */
+    public String runSQL(String sql, String format){
         String result = null;
         connect();
         try (Statement stmt  = conn.createStatement()){
@@ -73,23 +80,11 @@ public class Database{
         }
         return result;
     }
-
-    public int runUpdate(String sql){
-        int rs = 0;
-        connect();
-        try (Statement stmt  = conn.createStatement()){
-            rs = stmt.executeUpdate(sql);
-            //conn.commit();
-        } catch (SQLException e) {
-            if(this.debug) System.out.println(e.getMessage());
-        } finally {     
-            close();      
-        }
-        return rs;
-    }
     
     public String pad(String text, int width){
+        //Ensure the text has an even size
         String s = text.length() % 2 == 1? text += " ": text;
+        //Truncates the text by two if the text is larger than the width 
         s = text.length() >= width ? text.substring(0,width - 2): text;
         int diff = width - s.length();
         int padSize = diff / 2;
@@ -97,19 +92,25 @@ public class Database{
         return padding + s + padding;
     }
 
+    /* json(ResultSet)
+       Return a resultset as an array of JSON.  This method was created to be
+       used in conjunction with HTTPServer in order to deliver information through
+       an API.  Quotations are removed from value fields in order to produce a properly 
+       formed JSON output.
+    */
     private String json(ResultSet rs){
 		String result = "";
-        try{       
-            //Get field names            
+        try{               
             ResultSetMetaData metadata = rs.getMetaData();
             int columnCount = metadata.getColumnCount();   
 
             String field, value, build = "[";
-            // loop through the result set
+            
             while (rs.next()) {
                 build += "{";
                 for (int i = 1; i <= columnCount; i++) {
                     field = metadata.getColumnName(i);
+                    //Retrieve the value and remove "" which cause a problem with the JSON format
                     value = rs.getString(field).replace("\"","");
                     build += "\"" + field + "\":\"" + value + "\",";
                 }
@@ -121,11 +122,43 @@ public class Database{
         }
         return result;
 	}
+    /* csv(ResultSet)
+       Return a resultset in a csv format.  Commas are removed from value fields
+       in order to produce a properly formed csv output.
+    */
+    private String csv(ResultSet rs){
+		String result = "";
+        try{                  
+            ResultSetMetaData metadata = rs.getMetaData();
+            int columnCount = metadata.getColumnCount();   
 
+            String field, value;
+            //Create Column Headers
+            for (int i = 1; i <= columnCount; i++) {
+                field = metadata.getColumnName(i);
+                result += field + "," ;
+            }
+            result += "\n";
+            while (rs.next()) {
+                for (int i = 1; i <= columnCount; i++) {
+                    field = metadata.getColumnName(i);
+                    value = rs.getString(field).replace(",","");
+                    result += value + ",";
+                }
+                result += "\n";
+            }
+        } catch (SQLException e) {
+            if(this.debug) System.out.println(e.getMessage());
+        }
+        return result;
+	}  
+    /* table(Result,String):
+       Return a resultset in a table format.  Method accepts the size of the column.  If auto
+       is passed as the size, each column will be autofit to the longest data in the column.
+    */
     private String table(ResultSet rs, String colWidth){
 		String result = "", build;
-        try{       
-            //Get field names           
+        try{               
             ResultSetMetaData metadata = rs.getMetaData();
             int columnCount = metadata.getColumnCount(); 
             ArrayList<ArrayList<String>> data = new ArrayList<ArrayList<String>>();
@@ -150,6 +183,7 @@ public class Database{
                 }   
                 data.add(row);
             }
+            
             if(colWidth.equals("auto")){
                 for(int i = 0; i < columnCount;i++){
                     if(maxWidths[i] % 2 == 1){
@@ -157,6 +191,7 @@ public class Database{
                     } 
                 }
             }else{
+                //Set the maxWidth of each column to the value passed in
                 int width = Integer.parseInt(colWidth); 
                 if(width % 2 == 1){
                     width ++;
@@ -173,13 +208,16 @@ public class Database{
                 }
                 rowSeparator += "+";
             }
-            String header = "|";
+
             //Create Column Headers
+            String header = "|";
             row = data.get(0);
             for (int i = 0; i < columnCount; i++) {
                 header += pad(row.get(i),maxWidths[i]+2) + "|" ;
             }
             result = rowSeparator + "\n" + header + "\n" + rowSeparator + "\n";
+
+            //Create Data Rows
             for(int i = 1; i < data.size(); i++){
                 row = data.get(i);
                 result += "|";
@@ -193,33 +231,5 @@ public class Database{
             if(this.debug) System.out.println(e.getMessage());
         }
         return result;
-	}
-
-    private String csv(ResultSet rs){
-		String result = "";
-        try{       
-            //Get field names            
-            ResultSetMetaData metadata = rs.getMetaData();
-            int columnCount = metadata.getColumnCount();   
-
-            String field, value;
-            //Create Column Headers
-            for (int i = 1; i <= columnCount; i++) {
-                field = metadata.getColumnName(i);
-                result += field + "," ;
-            }
-            result += "\n";
-            while (rs.next()) {
-                for (int i = 1; i <= columnCount; i++) {
-                    field = metadata.getColumnName(i);
-                    value = rs.getString(field).replace(",","");
-                    result += value + ",";
-                }
-                result += "\n";
-            }
-        } catch (SQLException e) {
-            if(this.debug) System.out.println(e.getMessage());
-        }
-        return result;
-	}    
+	} 
 }

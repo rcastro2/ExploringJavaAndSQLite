@@ -33,7 +33,7 @@ public class DatabaseExplore {
         sql = "INSERT INTO Student (id,name,course) VALUES (6,\"O'Hara\",'Programming , Business Tech')";
         System.out.println(db.runSQL(sql));
         sql = "SELECT * FROM Student";
-        System.out.println(db.runQuery(sql,"table-10"));
+        System.out.println(db.runSQL(sql,"table-10"));
 
         sql = "UPDATE Student SET name = 'Reji' WHERE id = 3;";
         System.out.println(db.runSQL(sql));
@@ -41,11 +41,11 @@ public class DatabaseExplore {
         sql = "DELETE FROM Student WHERE id = 4;";
         System.out.println(db.runSQL(sql));
 
-        sql = "SELECT * FROM Student";
-        System.out.println(db.runQuery(sql,"table-15"));
-        System.out.println(db.runQuery(sql,"table-auto"));
-        System.out.println(db.runQuery(sql,"json"));
-        System.out.println(db.runQuery(sql,"csv"));
+        sql = "SELECT id, name FROM Student";
+        System.out.println(db.runSQL(sql,"table-15"));
+        System.out.println(db.runSQL(sql,"table-auto"));
+        System.out.println(db.runSQL(sql,"json"));
+        System.out.println(db.runSQL(sql,"csv"));
        
     }    
 
