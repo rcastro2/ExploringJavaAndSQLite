@@ -83,9 +83,9 @@ public class Database{
     
     public String pad(String text, int width){
         //Ensure the text has an even size
-        String s = text.length() % 2 == 1? text += " ": text;
+        String s = text.length() % 2 == 1? text + " ": text;
         //Truncates the text by two if the text is larger than the width 
-        s = text.length() >= width ? text.substring(0,width - 2): text;
+        s = s.length() >= width ? s.substring(0,width - 2): s;
         int diff = width - s.length();
         int padSize = diff / 2;
         String padding = new String(new char[padSize]).replace("\0", " ");
@@ -111,7 +111,12 @@ public class Database{
                 for (int i = 1; i <= columnCount; i++) {
                     field = metadata.getColumnName(i);
                     //Retrieve the value and remove "" which cause a problem with the JSON format
-                    value = rs.getString(field).replace("\"","");
+                    if( rs.getString(field)  != null){
+                        value = rs.getString(field).replace("\"","");
+                    }else{
+                        value = ""; // Value for null fields
+                    }
+                    
                     build += "\"" + field + "\":\"" + value + "\",";
                 }
                 build = build.substring(0,build.length()-1) + "},";
@@ -142,7 +147,11 @@ public class Database{
             while (rs.next()) {
                 for (int i = 1; i <= columnCount; i++) {
                     field = metadata.getColumnName(i);
-                    value = rs.getString(field).replace(",","");
+                    if( rs.getString(field) != null){
+                        value = rs.getString(field).replace(",","");
+                    }else{
+                        value = ""; // Value for null fields
+                    }
                     result += value + ",";
                 }
                 result += "\n";
@@ -177,7 +186,11 @@ public class Database{
                 row = new ArrayList<String>();
                 for (int i = 1; i <= columnCount; i++) {
                     field = metadata.getColumnName(i);
-                    value = rs.getString(field);
+                    if(rs.getString(field) != null){
+                        value = rs.getString(field);
+                    }else{
+                        value = "";
+                    }
                     row.add(value);
                     maxWidths[i - 1] = Math.max(maxWidths[i - 1], value.length());
                 }   
@@ -211,7 +224,6 @@ public class Database{
 
             //Create Column Headers
             String header = "|";
-            row = data.get(0);
             for (int i = 0; i < columnCount; i++) {
                 header += pad(row.get(i),maxWidths[i]+2) + "|" ;
             }
