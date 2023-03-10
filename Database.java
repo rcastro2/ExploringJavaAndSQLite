@@ -6,14 +6,21 @@ public class Database{
     private String url;
     private Connection conn;
     private boolean debug;
+    private boolean verbose;
 
     public Database(String url){
         this.url = url;
         this.debug = true;
+	this.verbose = false;
         connect(); 
     }
     public void setDebug(boolean state){
+	//Control the display of Exception messages
         this.debug = state;
+    }
+    public void setVerbose(boolean state){
+	//Determine whether to use full columns. ex) table.columnName
+        this.verbose = state;
     }
     private boolean connect(){
         boolean success = true;
@@ -104,11 +111,12 @@ public class Database{
             ResultSetMetaData metadata = rs.getMetaData();
             int columnCount = metadata.getColumnCount();   
 
-            String field, value, build = "[";
+            String field, table, value, build = "[";
             
             while (rs.next()) {
                 build += "{";
                 for (int i = 1; i <= columnCount; i++) {
+		    table = metadata.getTableName(i);
                     field = metadata.getColumnName(i);
                     //Retrieve the value and remove "" which cause a problem with the JSON format
                     if( rs.getString(field)  != null){
@@ -117,7 +125,7 @@ public class Database{
                         value = ""; // Value for null fields
                     }
                     
-                    build += "\"" + field + "\":\"" + value + "\",";
+                    build += "\"" + (this.verbose ? table + ".": "") + field + "\":\"" + value + "\",";
                 }
                 build = build.substring(0,build.length()-1) + "},";
             }
@@ -137,10 +145,11 @@ public class Database{
             ResultSetMetaData metadata = rs.getMetaData();
             int columnCount = metadata.getColumnCount();   
 
-            String field, value;
+            String field, table, value;
             //Create Column Headers
             for (int i = 1; i <= columnCount; i++) {
-                field = metadata.getColumnName(i);
+		table = metadata.getTableName(i);
+                field = (this.verbose ? table + ".": "") + metadata.getColumnName(i);
                 result += field + "," ;
             }
             result += "\n";
@@ -173,13 +182,14 @@ public class Database{
             ArrayList<ArrayList<String>> data = new ArrayList<ArrayList<String>>();
             ArrayList<String> row;
             int[] maxWidths = new int[columnCount]; 
-            String field, value;
+            String field, table, value;
             //Determine maxwidth for each column and store data
             row = new ArrayList<String>();
             for (int i = 1; i <= columnCount; i++) {
+                table = metadata.getTableName(i);
                 field = metadata.getColumnName(i);
-                row.add(field);
-                maxWidths[i - 1] = Math.max(maxWidths[i - 1], field.length());
+                row.add((this.verbose ? table + ".": "") + field);
+                maxWidths[i - 1] = Math.max(maxWidths[i - 1], ((this.verbose ? table + ".": "") + field).length());
             }
             data.add(row);
             while (rs.next()) {
@@ -224,6 +234,7 @@ public class Database{
 
             //Create Column Headers
             String header = "|";
+	    row = data.get(0);
             for (int i = 0; i < columnCount; i++) {
                 header += pad(row.get(i),maxWidths[i]+2) + "|" ;
             }

@@ -10,6 +10,7 @@ public class DatabaseExplore {
         
         Database db = new Database("jdbc:sqlite:mydb.db");
         db.setDebug(false);
+	db.setVerbose(true);
         String sql;
         
         sql = "CREATE TABLE Student (";
@@ -29,9 +30,9 @@ public class DatabaseExplore {
         System.out.println(db.runSQL(sql));
         sql = "INSERT INTO Student (id,name,course) VALUES (5,'Margolin','\"Programming\" Technologies')";
         System.out.println(db.runSQL(sql));
-        
         sql = "INSERT INTO Student (id,name,course) VALUES (6,\"O'Hara\",'Programming , Business Tech')";
         System.out.println(db.runSQL(sql));
+
         sql = "SELECT * FROM Student";
         System.out.println(db.runSQL(sql,"table-10"));
 
