@@ -111,7 +111,7 @@ public class Database{
             ResultSetMetaData metadata = rs.getMetaData();
             int columnCount = metadata.getColumnCount();   
 
-            String field, table, value, build = "[";
+            String field, table, value, build = "[ ";
             
             while (rs.next()) {
                 build += "{";
